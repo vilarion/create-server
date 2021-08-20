@@ -1,0 +1,36 @@
+version: "3.8"
+
+services:
+
+  game-server-test-TEST_NAME:
+    image: ghcr.io/illarion-ev/illarion-server/base:develop
+    restart: unless-stopped
+    ports:
+      - "TEST_PORT:TEST_PORT"
+    volumes:
+      - type: bind
+        source: /etc/illarion/test/TEST_NAME/server.conf
+        target: /etc/illarion.conf
+        read_only: true
+      - type: bind
+        source: $HOME/test-TEST_NAME/scripts
+        target: /scripts
+        read_only: true
+      - type: bind
+        source: $HOME/test-TEST_NAME/maps
+        target: /maps
+        read_only: true
+      - type: volume
+        source: saved-test-TEST_NAME-maps
+        target: /usr/share/illarion/map
+      - type: bind
+        source: /var/run/postgresql
+        target: /var/run/postgresql
+    logging:
+      driver: syslog
+      options:
+        tag: illarion-test-TEST_NAME
+    user: "1016:1003"
+
+volumes:
+  saved-test-TEST_NAME-maps:

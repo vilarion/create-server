@@ -1,0 +1,52 @@
+#!/bin/bash
+
+set -e
+
+if [ -z "$1" ]
+then
+    echo "Usage: create-server <name>\n"
+    exit
+fi
+
+# get a random free port
+read LOWERPORT UPPERPORT < /proc/sys/net/ipv4/ip_local_port_range
+while :
+do
+        port="`shuf -i $LOWERPORT-$UPPERPORT -n 1`"
+        ss -lpn | grep -q ":$port " || break
+done
+
+name=$1
+test_home=/usr/share/servers/testserver
+home=$test_home/test-$name
+web_dir=$test_home/public_html/$name
+etc_dir=/etc/illarion/test/$name
+schema=test_$name
+
+# set up logs
+mkdir $web_dir
+sed "s/TEST_NAME/$name/g" templates/script_error_log.php > $web_dir/script_error_log.php
+sed "s/TEST_NAME/$name/g" templates/script_log.php > $web_dir/script_log.php
+
+# set up repos
+mkdir $home
+git clone --depth 1 -b feature/$name ssh://git@localhost:1010/maps $home/maps
+git clone --depth 1 -b feature/$name ssh://git@localhost:1010/scripts $home/scripts
+
+# set up database
+wget http://illarion.org/media/localserver/db_dumps.php?request=schema -O /tmp/schema.dump --quiet
+wget http://illarion.org/media/localserver/db_dumps.php?request=content_text -O /tmp/content.dump --quiet
+sed -i "s/devserver/$schema/g" /tmp/schema.dump
+sed -i "s/devserver/$schema/g" /tmp/content.dump
+sed -i "/ DATABASE /d" /tmp/schema.dump
+psql illarion -1 -f /tmp/schema.dump > /dev/null
+psql illarion -1 -f /tmp/content.dump > /dev/null
+
+# set up server
+mkdir $etc_dir
+sed "s/TEST_NAME/$name/g" templates/server.conf | sed "s/TEST_PORT/$port/g" > $etc_dir/server.conf
+sed "s/TEST_NAME/$name/g" templates/server.yml | sed "s/TEST_PORT/$port/g" > $etc_dir/server.yml
+
+# set up discovery
+psql -c "INSERT INTO servers.servers (port, name, schema) VALUES ($port, 'Test: $name', '$schema')" illarion > /dev/null
+

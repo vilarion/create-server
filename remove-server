@@ -1,0 +1,16 @@
+#!/bin/bash
+
+set -e
+
+name=$1
+test_home=/usr/share/servers/testserver
+home=$test_home/test-$name
+web_dir=$test_home/public_html/$name
+etc_dir=/etc/illarion/test/$name
+schema=test_$name
+
+psql -c "DELETE FROM servers.servers WHERE schema = '$schema'" illarion > /dev/null
+rm -rf $home
+rm -rf $web_dir
+psql -c "DROP SCHEMA IF EXISTS test_$name CASCADE" illarion > /dev/null
+rm -rf $etc_dir
