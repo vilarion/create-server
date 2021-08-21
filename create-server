@@ -41,6 +41,8 @@ sed -i "s/devserver/$schema/g" /tmp/content.dump
 sed -i "/ DATABASE /d" /tmp/schema.dump
 psql illarion -1 -f /tmp/schema.dump > /dev/null
 psql illarion -1 -f /tmp/content.dump > /dev/null
+psql -c "GRANT USAGE ON SCHEMA $schema TO scripter" illarion > /dev/null
+psql -c "GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA $schema TO scripter" illarion > /dev/null
 
 # set up server
 mkdir $etc_dir
